@@ -1,20 +1,17 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import Video from "./components/features/video/Video";
-import VideoCard from "./components/features/video/VideoCard";
+import Video from "./features/video/Video";
+import VideoCard from "./features/video/VideoCard";
 import { listen } from "@tauri-apps/api/event";
-import { Snackbar } from "@mui/material";
+import { Box, Snackbar } from "@mui/material";
+import Navbar from "./features/layout/Navbar";
 
 function App() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [videos, setVideos] = useState<Video[]>([]);
   const [toast, setToast] = useState("");
   const [toastOpen, setToastOpen] = useState(false)
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  async function search(){
-    invoke("search", {query: searchQuery}).then(r =>{console.log(r);setVideos(r as Video[])})
-  }
+  
   listen<string>('status', (e)=>{
     setToast(e.payload);
     console.log(e)
@@ -26,25 +23,11 @@ function App() {
 
   return (
     <main className="container">
-      <h1>Yt Downloader</h1>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          search();
-        }}
-      >
-        <input
-          id="search-input"
-          onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          placeholder="Buscar un vidio"
-        />
-        <button type="submit">Buscar</button>
-      </form>
+      <Navbar setVideos={setVideos}/>
 
-      <div>
+      <Box className="w-screen mt-20">
         {videos.map(e=><VideoCard key={e.video_id} video={e}/>)}
-      </div>
+      </Box>
     <Snackbar
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         open={toastOpen}

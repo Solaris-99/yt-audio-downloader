@@ -1,8 +1,9 @@
-use yt_search::{SearchFilters, SortBy, VideoResult, YouTubeSearch};
-use yt_dlp::Youtube;
 use std::path::PathBuf;
-use yt_dlp::client::deps::Libraries;
 use tauri::{AppHandle, Emitter};
+use tauri_plugin_store::StoreExt;
+use yt_dlp::client::deps::Libraries;
+use yt_dlp::Youtube;
+use yt_search::{SearchFilters, SortBy, VideoResult, YouTubeSearch};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 pub async fn download_libs() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,7 +15,7 @@ pub async fn download_libs() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[tauri::command]
-async fn search(query: String) -> Option<Vec<VideoResult>>{
+async fn search(query: String) -> Option<Vec<VideoResult>> {
     let search = match YouTubeSearch::new(None, false) {
         Ok(search) => search,
         Err(e) => {
@@ -28,8 +29,11 @@ async fn search(query: String) -> Option<Vec<VideoResult>>{
     };
 
     match search.search(&query, filters).await {
-        Ok(results)=>Some(results),
-        Err(e) => {eprintln!("Search error: {}", e); None},
+        Ok(results) => Some(results),
+        Err(e) => {
+            eprintln!("Search error: {}", e);
+            None
+        }
     }
 }
 
@@ -44,13 +48,12 @@ async fn download_audio(app: AppHandle, url: String) {
     if !youtube.exists() || !ffmpeg.exists() {
         app.emit("status", "Descargando librerias...").unwrap();
         let _ = match download_libs().await {
-            Ok(_) => {app.emit("status", "Descarga de librerias completa")},
+            Ok(_) => app.emit("status", "Descarga de librerias completa"),
             Err(e) => {
                 eprintln!("library downloading error: {}", e);
                 app.emit("status", "Error descargando las librerias")
-            },
+            }
         };
-        
     }
 
     let libraries = Libraries::new(youtube, ffmpeg);
@@ -59,20 +62,34 @@ async fn download_audio(app: AppHandle, url: String) {
         Ok(f) => {
             app.emit("status", "Descargando video...").unwrap();
             let _ = match f.download_audio_stream_from_url(url, "test.mp3").await {
-                Ok(_) => {app.emit("status", "Descarga completa")},
-            Err(e) => {
-                eprintln!("Search error: {}", e);
-                app.emit("status", "Descarga fallida")
-            },
+                Ok(_) => app.emit("status", "Descarga completa"),
+                Err(e) => {
+                    eprintln!("Search error: {}", e);
+                    app.emit("status", "Descarga fallida")
+                }
             };
-        },
-        Err(e) => {println!("Download error: {}", e)},
+        }
+        Err(e) => {
+            println!("Download error: {}", e)
+        }
     }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .setup(|app| {
+            let store = app.store("config.json")?;
+            match store.get("output_dir") {
+                Some(_) => Ok(()),
+                None => {
+                    store.set("output_dir", "output");
+                    Ok(())
+                }
+            }
+        })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![search, download_audio])
         .run(tauri::generate_context!())

@@ -13,7 +13,7 @@ const VideoCard = ({video} : VideoCardProps)=>{
     }
 
     return (
-        <Card  className="grid grid-cols-4 my-2">
+        <Card  className="grid grid-cols-4 my-2 video-card">
             <CardMedia
             className="block my-auto"
             component={"img"}

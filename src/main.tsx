@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ThemeProvider } from "@mui/material/styles"
-import darkTheme from "./components/layout/theme";
+import darkTheme from "./features/layout/theme";
 
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

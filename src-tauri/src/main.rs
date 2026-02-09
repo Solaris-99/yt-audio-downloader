@@ -4,4 +4,3 @@
 fn main() {
     yt_audio_downloader_lib::run()
 }
-
