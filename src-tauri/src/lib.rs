@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_store::StoreExt;
 use yt_dlp::client::deps::Libraries;
@@ -6,10 +6,9 @@ use yt_dlp::Youtube;
 use yt_search::{SearchFilters, SortBy, VideoResult, YouTubeSearch};
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-pub async fn download_libs() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn download_libs(output_str: String) -> Result<(), Box<dyn std::error::Error>> {
     let executables_dir = PathBuf::from("libs");
-    let output_dir = PathBuf::from("output");
-
+    let output_dir = PathBuf::from(output_str);
     let _ = Youtube::with_new_binaries(executables_dir, output_dir).await?;
     Ok(())
 }
@@ -38,16 +37,19 @@ async fn search(query: String) -> Option<Vec<VideoResult>> {
 }
 
 #[tauri::command]
-async fn download_audio(app: AppHandle, url: String) {
+async fn download_audio(app: AppHandle, url: String, video_name: String) {
     let libraries_dir = PathBuf::from("libs");
-    let output_dir = PathBuf::from("output");
-
     let youtube = libraries_dir.join("yt-dlp");
     let ffmpeg = libraries_dir.join("ffmpeg");
-
+    println!("checking store...");
+    let store = app.store("config.json").unwrap();
+    let output_val = store.get("output_dir").unwrap();
+    let output_dir = output_val.as_str().unwrap();
+    println!("checking libraries...");
     if !youtube.exists() || !ffmpeg.exists() {
         app.emit("status", "Descargando librerias...").unwrap();
-        let _ = match download_libs().await {
+
+        let _ = match download_libs(String::from(output_dir)).await {
             Ok(_) => app.emit("status", "Descarga de librerias completa"),
             Err(e) => {
                 eprintln!("library downloading error: {}", e);
@@ -55,13 +57,13 @@ async fn download_audio(app: AppHandle, url: String) {
             }
         };
     }
-
+    println!("libraries found...");
     let libraries = Libraries::new(youtube, ffmpeg);
     let fetcher = Youtube::new(libraries, output_dir).await;
     match fetcher {
         Ok(f) => {
             app.emit("status", "Descargando video...").unwrap();
-            let _ = match f.download_audio_stream_from_url(url, "test.mp3").await {
+            let _ = match f.download_audio_stream_from_url(url, video_name).await {
                 Ok(_) => app.emit("status", "Descarga completa"),
                 Err(e) => {
                     eprintln!("Search error: {}", e);
@@ -78,6 +80,7 @@ async fn download_audio(app: AppHandle, url: String) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
@@ -85,7 +88,8 @@ pub fn run() {
             match store.get("output_dir") {
                 Some(_) => Ok(()),
                 None => {
-                    store.set("output_dir", "output");
+                    let path = env::current_dir()?;
+                    store.set("output_dir", path.join("music").to_str());
                     Ok(())
                 }
             }

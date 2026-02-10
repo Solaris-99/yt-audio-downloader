@@ -4,12 +4,13 @@ import Video from "./Video"
 
 interface VideoCardProps {
     video: Video
+    setVideoPlayer: (video: Video)=>void;
 }
 
-const VideoCard = ({video} : VideoCardProps)=>{
+const VideoCard = ({video, setVideoPlayer} : VideoCardProps)=>{
     const download = (url: String)=>{
         url = "https://www.youtube.com/watch?v=" + url
-        invoke("download_audio", {url})
+        invoke("download_audio", {url, videoName: `${video.channel_name} - ${video.title}.mp3`})
     }
 
     return (
@@ -35,6 +36,9 @@ const VideoCard = ({video} : VideoCardProps)=>{
                 <CardActions>
                     <Button size="small" onClick={()=>download(video.video_id)}>
                         Descargar
+                    </Button>
+                    <Button onClick={()=>setVideoPlayer(video)}>
+                        Play
                     </Button>
                 </CardActions>
             </CardContent>

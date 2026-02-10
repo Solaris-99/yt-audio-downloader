@@ -6,7 +6,7 @@ export interface ConfigType {
 
 export class Config {
 
-    private static config : ConfigType | null;
+    private static config : ConfigType | null = null;
 
     public static async getConfig(){
         if (!Config.config){
@@ -16,6 +16,14 @@ export class Config {
             Config.config = {output_dir} as ConfigType
         }
         return Config.config;
+    }
+
+    public static async setConfig(config: ConfigType){
+        Config.config = config;
+        const store = await load("config.json")
+        for (let conf in config){
+            store.set(conf, config[conf as keyof Config])
+        }
     }
 
 }

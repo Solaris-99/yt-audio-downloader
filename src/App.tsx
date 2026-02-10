@@ -5,11 +5,13 @@ import VideoCard from "./features/video/VideoCard";
 import { listen } from "@tauri-apps/api/event";
 import { Box, Snackbar } from "@mui/material";
 import Navbar from "./features/layout/Navbar";
+import Player from "./features/video/Player";
 
 function App() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [toast, setToast] = useState("");
   const [toastOpen, setToastOpen] = useState(false)
+  const [currentVideo, setCurrentVideo] = useState<Video|null>(null)
   // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   
   listen<string>('status', (e)=>{
@@ -26,7 +28,7 @@ function App() {
       <Navbar setVideos={setVideos}/>
 
       <Box className="w-screen mt-20">
-        {videos.map(e=><VideoCard key={e.video_id} video={e}/>)}
+        {videos.map(e=><VideoCard setVideoPlayer={setCurrentVideo} key={e.video_id} video={e}/>)}
       </Box>
     <Snackbar
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -35,6 +37,7 @@ function App() {
         message={toast}
         key={'toast_message'}
       />
+      <Player video={currentVideo}/>
     </main>
   );
 }
